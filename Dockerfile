@@ -38,6 +38,9 @@ RUN chmod +x /app/*.sh && \
 # Switch to non-root
 USER app
 
+#Healthcheck for container
+HEALTHCHECK CMD pgrep bash || exit 1
+
 # Entrypoint
 ENTRYPOINT ["/app/start.sh"]
 CMD []
