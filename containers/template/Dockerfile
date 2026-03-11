@@ -5,11 +5,11 @@ ARG VERSION
 ARG VCS_REF
 
 LABEL org.opencontainers.image.created=$BUILD_DATE \
-      org.opencontainers.image.version=$VERSION \
-      org.opencontainers.image.revision=$VCS_REF \
-      org.opencontainers.image.title="Template Container" \
-      org.opencontainers.image.description="Minimal container template" \
-      org.opencontainers.image.licenses="MIT"
+org.opencontainers.image.version=$VERSION \
+org.opencontainers.image.revision=$VCS_REF \
+org.opencontainers.image.title="Template Container" \
+org.opencontainers.image.description="Minimal container template" \
+org.opencontainers.image.licenses="MIT"
 
 RUN addgroup -S app && adduser -S app -G app
 
