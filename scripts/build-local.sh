@@ -3,8 +3,13 @@
 CONTAINER=$1
 
 if [ -z "$CONTAINER" ]; then
-  echo "Usage: build-local.sh <container>"
+  echo "Usage:"
+  echo "./build-local.sh <container>"
   exit 1
 fi
 
-docker build -t local/$CONTAINER ./containers/$CONTAINER
+echo "Building container: $CONTAINER"
+
+docker build \
+-t local/$CONTAINER \
+./containers/$CONTAINER
