@@ -1,0 +1,21 @@
+FROM alpine:3.20
+
+LABEL org.opencontainers.image.title="backup-runner-minimal"
+LABEL org.opencontainers.image.licenses="MIT"
+
+# Alleen wat je script echt nodig heeft
+RUN apk add --no-cache \
+    bash \
+    openssh-client \
+    sshpass \
+    mysql-client \
+    unzip \
+    zip \
+    coreutils \
+    findutils
+
+# Geen directories, geen script copy
+WORKDIR /app
+
+# Default: niets forceren → jij bepaalt command
+CMD ["bash"]
