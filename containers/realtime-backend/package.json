@@ -1,0 +1,11 @@
+{
+  "name": "earth-backend",
+  "version": "1.0.0",
+  "description": "Realtime Earth API",
+  "main": "server.js",
+  "dependencies": {
+    "express": "^4.18.2",
+    "axios": "^1.6.0",
+    "cors": "^2.8.5"
+  }
+}
