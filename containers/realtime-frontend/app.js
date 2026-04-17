@@ -1,16 +1,20 @@
 const map = L.map('map').setView([20, 0], 2);
 
-// 🌙 Dark mode kaart
+// 🌙 Dark map
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
 
-// State
+// ===== STATE =====
 let flightMarkers = {};
 let previousFlights = {};
 let flightTrails = {};
 let quakeMarkers = [];
 let lightningMarkers = [];
 
-// ✈️ Plane icon
+let showFlights = true;
+let showQuakes = true;
+let showLightning = true;
+
+// ===== ICON =====
 function createPlaneIcon(rotation = 0) {
   return L.divIcon({
     className: "plane-icon",
@@ -19,20 +23,17 @@ function createPlaneIcon(rotation = 0) {
         transform: rotate(${rotation}deg);
         color: #00d4ff;
         font-size: 14px;
-      ">
-        ✈
-      </div>
+      ">✈</div>
     `,
     iconSize: [20, 20],
     iconAnchor: [10, 10]
   });
 }
 
-// ✈️ Smooth animation
+// ===== ANIMATION =====
 function animateMarker(marker, from, to) {
-  const duration = 20000;
   const steps = 60;
-  const interval = duration / steps;
+  const interval = 20000 / steps;
 
   let i = 0;
 
@@ -42,20 +43,24 @@ function animateMarker(marker, from, to) {
   const anim = setInterval(() => {
     i++;
 
-    const currentLat = from.lat + latStep * i;
-    const currentLon = from.lon + lonStep * i;
+    const lat = from.lat + latStep * i;
+    const lon = from.lon + lonStep * i;
 
-    marker.setLatLng([currentLat, currentLon]);
-
-    // update rotatie tijdens beweging
+    marker.setLatLng([lat, lon]);
     marker.setIcon(createPlaneIcon(to.heading));
 
     if (i >= steps) clearInterval(anim);
   }, interval);
 }
 
-// 🌍 Earthquakes
+// ===== EARTHQUAKES =====
 async function loadEarthquakes() {
+  if (!showQuakes) {
+    quakeMarkers.forEach(m => map.removeLayer(m));
+    quakeMarkers = [];
+    return;
+  }
+
   try {
     const res = await fetch("/api/earthquakes");
     const data = await res.json();
@@ -85,17 +90,27 @@ async function loadEarthquakes() {
   }
 }
 
-// ✈️ Flights (clean + smooth)
+// ===== FLIGHTS =====
 async function loadFlights() {
+  if (!showFlights) {
+    Object.values(flightMarkers).forEach(m => map.removeLayer(m));
+    Object.values(flightTrails).forEach(t => {
+      if (t.line) map.removeLayer(t.line);
+    });
+
+    flightMarkers = {};
+    flightTrails = {};
+    previousFlights = {};
+    return;
+  }
+
   try {
     const res = await fetch("/api/flights");
     const data = await res.json();
 
     if (!data.states) return;
 
-    // 🔥 performance limit
-    let states = data.states.slice(0, 1500);
-
+    const states = data.states.slice(0, 1500);
     const newFlights = {};
 
     states.forEach(f => {
@@ -114,12 +129,11 @@ async function loadFlights() {
       };
     });
 
-    // create / update
     Object.keys(newFlights).forEach(id => {
       const flight = newFlights[id];
       const prev = previousFlights[id];
 
-      // nieuw
+      // marker
       if (!flightMarkers[id]) {
         const marker = L.marker(
           [flight.lat, flight.lon],
@@ -132,53 +146,46 @@ async function loadFlights() {
         `);
 
         flightMarkers[id] = marker;
-        return;
+      } else if (prev) {
+        animateMarker(flightMarkers[id], prev, flight);
       }
-      // trail init
+
+      // trail
       if (!flightTrails[id]) {
         flightTrails[id] = [];
       }
 
-      // voeg nieuwe positie toe
       flightTrails[id].push([flight.lat, flight.lon]);
 
-      // max lengte beperken (bijv. laatste 20 punten)
       if (flightTrails[id].length > 20) {
         flightTrails[id].shift();
       }
 
-      // verwijder oude lijn als die bestaat
       if (flightTrails[id].line) {
         map.removeLayer(flightTrails[id].line);
       }
 
-      // teken nieuwe lijn
       const line = L.polyline(flightTrails[id], {
         color: "#00d4ff",
         weight: 1,
-        opacity: 0.5
+        opacity: 0.4
       }).addTo(map);
 
-      // sla lijn op
       flightTrails[id].line = line;
-
-      // bestaand → smooth move
-      if (prev) {
-        animateMarker(flightMarkers[id], prev, flight);
-      }
     });
 
-    // verwijder oude flights
+    // cleanup
     Object.keys(flightMarkers).forEach(id => {
       if (!newFlights[id]) {
         map.removeLayer(flightMarkers[id]);
         delete flightMarkers[id];
-      }
-      if (flightTrails[id]) {
-        if (flightTrails[id].line) {
-          map.removeLayer(flightTrails[id].line);
+
+        if (flightTrails[id]) {
+          if (flightTrails[id].line) {
+            map.removeLayer(flightTrails[id].line);
+          }
+          delete flightTrails[id];
         }
-        delete flightTrails[id];
       }
     });
 
@@ -189,25 +196,28 @@ async function loadFlights() {
   }
 }
 
+// ===== LIGHTNING =====
 async function loadLightning() {
+  if (!showLightning) {
+    lightningMarkers.forEach(m => map.removeLayer(m));
+    lightningMarkers = [];
+    return;
+  }
+
   try {
     const res = await fetch("https://data.lightningmaps.org/json/strikes.json");
     const data = await res.json();
 
-    // oude markers verwijderen
     lightningMarkers.forEach(m => map.removeLayer(m));
     lightningMarkers = [];
 
-    data.forEach(strike => {
-      const lat = strike.lat;
-      const lon = strike.lon;
+    data.slice(0, 500).forEach(s => {
+      if (!s.lat || !s.lon) return;
 
-      if (!lat || !lon) return;
-
-      const marker = L.circleMarker([lat, lon], {
-        radius: 3,
+      const marker = L.circleMarker([s.lat, s.lon], {
+        radius: 2,
         color: "#ffff00",
-        opacity: 1
+        fillOpacity: 0.8
       }).addTo(map);
 
       lightningMarkers.push(marker);
@@ -218,7 +228,7 @@ async function loadLightning() {
   }
 }
 
-// 🔄 refresh loop
+// ===== REFRESH =====
 async function refresh() {
   await loadEarthquakes();
   await loadFlights();
@@ -226,5 +236,20 @@ async function refresh() {
 }
 
 refresh();
-setInterval(refresh, 20000); // elke 20 sec voor alles
-setInterval(loadLightning, 10000); // elke 10 sec voor bliksem  
+setInterval(refresh, 20000);
+setInterval(loadLightning, 10000);
+
+// ===== UI EVENTS =====
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("toggleFlights").addEventListener("change", e => {
+    showFlights = e.target.checked;
+  });
+
+  document.getElementById("toggleQuakes").addEventListener("change", e => {
+    showQuakes = e.target.checked;
+  });
+
+  document.getElementById("toggleLightning").addEventListener("change", e => {
+    showLightning = e.target.checked;
+  });
+});
