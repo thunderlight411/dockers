@@ -243,8 +243,11 @@ document.addEventListener("DOMContentLoaded", () => {
     lightning.addEventListener("change", e => {
       showLightning = e.target.checked;
 
-      if (showLightning) {
-        map.addLayer(lightningLayer);
+      const lightningToggle = document.getElementById("toggleLightning");
+
+      if (lightningToggle && lightningToggle.checked) {
+        showLightning = true;
+        lightningLayer.addTo(map);
       } else {
         map.removeLayer(lightningLayer);
       }
