@@ -8,11 +8,9 @@ let flightMarkers = {};
 let previousFlights = {};
 let flightTrails = {};
 let quakeMarkers = [];
-let lightningMarkers = [];
 
 let showFlights = true;
 let showQuakes = true;
-let showLightning = true;
 
 // ===== ICON =====
 function createPlaneIcon(rotation = 0) {
@@ -35,12 +33,14 @@ function animateMarker(marker, from, to) {
   const steps = 60;
   const interval = 20000 / steps;
 
+  if (marker._anim) clearInterval(marker._anim);
+
   let i = 0;
 
   const latStep = (to.lat - from.lat) / steps;
   const lonStep = (to.lon - from.lon) / steps;
 
-  const anim = setInterval(() => {
+  marker._anim = setInterval(() => {
     i++;
 
     const lat = from.lat + latStep * i;
@@ -49,7 +49,7 @@ function animateMarker(marker, from, to) {
     marker.setLatLng([lat, lon]);
     marker.setIcon(createPlaneIcon(to.heading));
 
-    if (i >= steps) clearInterval(anim);
+    if (i >= steps) clearInterval(marker._anim);
   }, interval);
 }
 
@@ -63,6 +63,8 @@ async function loadEarthquakes() {
 
   try {
     const res = await fetch("/api/earthquakes");
+    if (!res.ok) return;
+
     const data = await res.json();
 
     quakeMarkers.forEach(m => map.removeLayer(m));
@@ -106,11 +108,17 @@ async function loadFlights() {
 
   try {
     const res = await fetch("/api/flights");
+
+    if (!res.ok) {
+      console.warn("Flights API error:", res.status);
+      return;
+    }
+
     const data = await res.json();
 
-    if (!data.states) return;
+    if (!data.states || !Array.isArray(data.states)) return;
 
-    const states = data.states.slice(0, 1500);
+    const states = data.states.slice(0, 1000);
     const newFlights = {};
 
     states.forEach(f => {
@@ -133,7 +141,6 @@ async function loadFlights() {
       const flight = newFlights[id];
       const prev = previousFlights[id];
 
-      // marker
       if (!flightMarkers[id]) {
         const marker = L.marker(
           [flight.lat, flight.lon],
@@ -150,14 +157,14 @@ async function loadFlights() {
         animateMarker(flightMarkers[id], prev, flight);
       }
 
-      // trail
+      // trails
       if (!flightTrails[id]) {
         flightTrails[id] = [];
       }
 
       flightTrails[id].push([flight.lat, flight.lon]);
 
-      if (flightTrails[id].length > 20) {
+      if (flightTrails[id].length > 15) {
         flightTrails[id].shift();
       }
 
@@ -168,7 +175,7 @@ async function loadFlights() {
       const line = L.polyline(flightTrails[id], {
         color: "#00d4ff",
         weight: 1,
-        opacity: 0.4
+        opacity: 0.3
       }).addTo(map);
 
       flightTrails[id].line = line;
@@ -196,60 +203,29 @@ async function loadFlights() {
   }
 }
 
-// ===== LIGHTNING =====
-async function loadLightning() {
-  if (!showLightning) {
-    lightningMarkers.forEach(m => map.removeLayer(m));
-    lightningMarkers = [];
-    return;
-  }
-
-  try {
-    const res = await fetch("https://data.lightningmaps.org/json/strikes.json");
-    const data = await res.json();
-
-    lightningMarkers.forEach(m => map.removeLayer(m));
-    lightningMarkers = [];
-
-    data.slice(0, 500).forEach(s => {
-      if (!s.lat || !s.lon) return;
-
-      const marker = L.circleMarker([s.lat, s.lon], {
-        radius: 2,
-        color: "#ffff00",
-        fillOpacity: 0.8
-      }).addTo(map);
-
-      lightningMarkers.push(marker);
-    });
-
-  } catch (err) {
-    console.error("Lightning error:", err);
-  }
-}
-
 // ===== REFRESH =====
 async function refresh() {
   await loadEarthquakes();
   await loadFlights();
-//  await loadLightning();
 }
 
 refresh();
 setInterval(refresh, 20000);
-//setInterval(loadLightning, 10000);
 
-// ===== UI EVENTS =====
+// ===== SAFE UI EVENTS =====
 document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("toggleFlights").addEventListener("change", e => {
-    showFlights = e.target.checked;
-  });
+  const flights = document.getElementById("toggleFlights");
+  const quakes = document.getElementById("toggleQuakes");
 
-  document.getElementById("toggleQuakes").addEventListener("change", e => {
-    showQuakes = e.target.checked;
-  });
+  if (flights) {
+    flights.addEventListener("change", e => {
+      showFlights = e.target.checked;
+    });
+  }
 
-  document.getElementById("toggleLightning").addEventListener("change", e => {
-    showLightning = e.target.checked;
-  });
+  if (quakes) {
+    quakes.addEventListener("change", e => {
+      showQuakes = e.target.checked;
+    });
+  }
 });
