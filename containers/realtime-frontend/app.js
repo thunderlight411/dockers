@@ -45,6 +45,9 @@ function animateMarker(marker, from, to) {
 
     marker.setLatLng([currentLat, currentLon]);
 
+    // update rotatie tijdens beweging
+    marker.setIcon(createPlaneIcon(to.heading));
+
     if (i >= steps) clearInterval(anim);
   }, interval);
 }
@@ -103,6 +106,7 @@ async function loadFlights() {
       newFlights[id] = {
         lat,
         lon,
+        heading: f[10] || 0,
         callsign: (f[1] || "").trim(),
         country: f[2] || "Unknown"
       };
@@ -117,7 +121,7 @@ async function loadFlights() {
       if (!flightMarkers[id]) {
         const marker = L.marker(
           [flight.lat, flight.lon],
-          { icon: createPlaneIcon() }
+          { icon: createPlaneIcon(flight.heading) }
         ).addTo(map);
 
         marker.bindPopup(`
