@@ -1,43 +1,61 @@
-# FTP Downloader Docker Container
+# FTP Downloader Container
 
-A lightweight Docker container that downloads files from an FTP server on a scheduled basis.
-The container uses **lftp** for reliable FTP mirroring and **cron** to execute the download task daily.
+Scheduled FTP mirroring container built on Alpine and powered by `lftp` plus `cron`.
 
-This project is designed to run easily in environments such as **Portainer**, **Docker Compose**, or a simple **docker run** command.
+## Overview
 
----
+This image is designed to pull files from an FTP server into a mounted local directory on a fixed schedule.
 
-# Features
+The container:
 
-* Automated FTP downloads using `lftp`
-* Scheduled execution via `cron`
-* Lightweight Alpine Linux base image
-* Environment variable configuration
-* Compatible with **Docker**, **Docker Compose**, and **Portainer Stacks**
+* installs `lftp`, `bash`, `tzdata`, and `ca-certificates`
+* stores the download script at `/scripts/download.sh`
+* starts `crond` in the foreground
+* runs the download job daily at `06:00`
 
----
+## Runtime Behavior
 
-# Environment Variables
+The bundled crontab contains:
 
-| Variable   | Required | Description                      | Example         |
-| ---------- | -------- | -------------------------------- | --------------- |
-| FTP_HOST   | Yes      | FTP server hostname or IP        | ftp.example.com |
-| FTP_USER   | Yes      | FTP username                     | backup-user     |
-| FTP_PASS   | Yes      | FTP password                     | secretpassword  |
-| REMOTE_DIR | No       | Remote FTP directory to mirror   | /backups        |
-| LOCAL_DIR  | No       | Local directory inside container | /downloads      |
-
-Default local download directory:
-
-```
-/downloads
+```cron
+0 6 * * * /scripts/download.sh >> /var/log/ftp-download.log 2>&1
 ```
 
----
+The download script connects with:
 
-# Docker Run Example
+```text
+lftp -u "$FTP_USER","$FTP_PASS" "$FTP_HOST"
+```
 
-Example of running the container using a standard Docker command.
+and mirrors:
+
+```text
+${REMOTE_DIR:-/} -> /downloads
+```
+
+## Required Environment Variables
+
+| Variable | Required | Description |
+| -------- | -------- | ----------- |
+| `FTP_HOST` | Yes | FTP server hostname or IP address |
+| `FTP_USER` | Yes | FTP username |
+| `FTP_PASS` | Yes | FTP password |
+| `REMOTE_DIR` | No | Remote directory to mirror. Defaults to `/` |
+
+Notes:
+
+* the download destination inside the container is always `/downloads`
+* `LOCAL_DIR` is not used by the current Dockerfile or script
+
+## Build
+
+From the repository root:
+
+```bash
+docker build -t local/ftp-downloader ./containers/ftp-downloader
+```
+
+## Run
 
 ```bash
 docker run -d \
@@ -48,89 +66,42 @@ docker run -d \
   -e REMOTE_DIR=/backups \
   -v /data/ftp:/downloads \
   --restart unless-stopped \
-  ghcr.io/YOUR_GITHUB_USERNAME/ftp-downloader:latest
+  local/ftp-downloader
 ```
 
-Explanation:
-
-* `/data/ftp` → local directory where files will be stored
-* `/downloads` → directory inside the container
-* `--restart unless-stopped` → ensures container restarts automatically
-
----
-
-# Docker Stack / Portainer Example
-
-Example stack configuration for **Portainer** or **Docker Swarm**.
+## Compose Example
 
 ```yaml
-version: "3.8"
-
 services:
-
   ftp-downloader:
-    image: ghcr.io/YOUR_GITHUB_USERNAME/ftp-downloader:latest
+    image: ghcr.io/thunderlight411/dockers/ftp-downloader:latest
     container_name: ftp-downloader
-
     environment:
       FTP_HOST: ftp.example.com
       FTP_USER: backup-user
       FTP_PASS: secretpassword
       REMOTE_DIR: /backups
-
     volumes:
       - /data/ftp:/downloads
-
     restart: unless-stopped
 ```
 
-Deploy in Portainer:
+## Logs
 
-1. Go to **Stacks**
-2. Click **Add Stack**
-3. Paste the configuration
-4. Deploy the stack
+Cron job output is written to `/var/log/ftp-download.log` inside the container. Runtime logs are also visible with:
 
----
-
-# How It Works
-
-1. The container starts.
-2. `cron` runs inside the container.
-3. At the scheduled time, the script executes:
-
-```
-/scripts/download.sh
-```
-
-4. The script runs an `lftp mirror` command that synchronizes files from the FTP server to the local directory.
-
-Example command executed internally:
-
-```
-lftp mirror --verbose --continue --parallel=2 /remote /downloads
-```
-
-This ensures:
-
-* interrupted downloads resume
-* only new or changed files are downloaded
-* downloads run efficiently
-
----
-
-# Logs
-
-Logs can be viewed using Docker:
-
-```
+```bash
 docker logs ftp-downloader
 ```
 
-Or via Portainer container logs.
+## Published Image
 
----
+When built by CI, the image is published as:
 
-# License
+```text
+ghcr.io/thunderlight411/dockers/ftp-downloader:latest
+```
 
-MIT License
+## License
+
+MIT

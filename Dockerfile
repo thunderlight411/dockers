@@ -30,7 +30,8 @@ WORKDIR /app
 
 # Copy scripts
 COPY scripts/ /app/
-
+# Expose port if needed
+EXPOSE 8080
 # Permissions
 RUN chmod +x /app/*.sh && \
     chown -R app:app /app

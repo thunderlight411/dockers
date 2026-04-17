@@ -1,72 +1,80 @@
-Backup Runner
+# SFTP MySQL Downloader
 
-A lightweight Docker container designed to execute backup scripts that rely on:
+Utility image for running custom backup or import scripts that need SFTP and MySQL client tooling.
 
-* SFTP (via `sshpass`)
-* MySQL dumps (`mysqldump`)
-* ZIP extraction
+## Overview
 
-## 📦 Features
+This image is intentionally generic. It does not include a built-in backup script or scheduler. Instead, it provides a working toolset that you can use from your own script mounted into the container.
 
-* ✅ Lightweight (Alpine-based, ~60–90MB)
-* ✅ Supports SFTP downloads
-* ✅ Supports MySQL backups
-* ✅ Includes unzip/zip tools
-* ✅ No opinionated runtime behavior
+Base image:
 
----
+* `debian:bookworm-slim`
 
-## 🧰 Included Tools
+Included packages:
 
-| Tool                  | Purpose                  |
-| --------------------- | ------------------------ |
-| bash                  | Script execution         |
-| openssh-client        | SSH / SFTP / ssh-keyscan |
-| sshpass               | Password-based SFTP      |
-| mysql-client          | mysqldump                |
-| unzip / zip           | Archive handling         |
-| coreutils / findutils | File operations          |
+* `bash`
+* `ca-certificates`
+* `openssh-client`
+* `sshpass`
+* `default-mysql-client`
+* `unzip`
+* `zip`
+* `findutils`
+* `coreutils`
 
----
+Default behavior:
 
-## 🚀 Usage
+* working directory is `/app`
+* default command is `bash`
 
-### Run with a local script
+## Build
+
+From the repository root:
+
+```bash
+docker build -t local/sftp_mysql-downloader ./containers/sftp_mysql-downloader
+```
+
+## Run a Script
 
 ```bash
 docker run --rm \
-  -v /opt/backups:/var/just/server_backups \
-  -v $(pwd)/backup.sh:/app/backup.sh \
-  backup-runner-minimal \
+  -v /opt/backups:/var/backups \
+  -v "$(pwd)/backup.sh:/app/backup.sh" \
+  local/sftp_mysql-downloader \
   bash /app/backup.sh
 ```
 
----
-
-### Docker Compose
+## Compose Example
 
 ```yaml
-version: "3.8"
-
 services:
   backup:
-    image: backup-runner-minimal
+    image: ghcr.io/thunderlight411/dockers/sftp_mysql-downloader:latest
     volumes:
-      - /opt/backups:/var/just/server_backups
+      - /opt/backups:/var/backups
       - ./backup.sh:/app/backup.sh
     command: ["bash", "/app/backup.sh"]
 ```
 
----
+## Typical Use Cases
 
-## 📄 License
+This image is a reasonable fit when your script needs some combination of:
 
-MIT License
+* `sftp` or `scp` access via `openssh-client`
+* password-based automation via `sshpass`
+* `mysqldump` and other MySQL client commands
+* archive extraction or creation with `unzip` and `zip`
+* standard shell utilities for file processing
 
----
+## Published Image
 
-## 👤 Author
+When built by CI, the image is published as:
 
-GitHub: https://github.com/thunderlight411
+```text
+ghcr.io/thunderlight411/dockers/sftp_mysql-downloader:latest
+```
 
----
+## License
+
+MIT
