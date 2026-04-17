@@ -3,6 +3,14 @@ const map = L.map('map').setView([20, 0], 2);
 // 🌙 Dark map
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
 
+// ⚡ Lightning layer (tile-based, stabiel)
+const lightningLayer = L.tileLayer(
+  "https://tile.lightningmaps.org/tiles/{z}/{x}/{y}.png",
+  {
+    opacity: 0.6
+  }
+);
+
 // ===== STATE =====
 let flightMarkers = {};
 let previousFlights = {};
@@ -11,6 +19,7 @@ let quakeMarkers = [];
 
 let showFlights = true;
 let showQuakes = true;
+let showLightning = false;
 
 // ===== ICON =====
 function createPlaneIcon(rotation = 0) {
@@ -212,10 +221,11 @@ async function refresh() {
 refresh();
 setInterval(refresh, 20000);
 
-// ===== SAFE UI EVENTS =====
+// ===== UI EVENTS =====
 document.addEventListener("DOMContentLoaded", () => {
   const flights = document.getElementById("toggleFlights");
   const quakes = document.getElementById("toggleQuakes");
+  const lightning = document.getElementById("toggleLightning");
 
   if (flights) {
     flights.addEventListener("change", e => {
@@ -227,5 +237,22 @@ document.addEventListener("DOMContentLoaded", () => {
     quakes.addEventListener("change", e => {
       showQuakes = e.target.checked;
     });
+  }
+
+  if (lightning) {
+    lightning.addEventListener("change", e => {
+      showLightning = e.target.checked;
+
+      if (showLightning) {
+        map.addLayer(lightningLayer);
+      } else {
+        map.removeLayer(lightningLayer);
+      }
+    });
+  }
+
+  // default state
+  if (showLightning) {
+    lightningLayer.addTo(map);
   }
 });
