@@ -27,6 +27,16 @@ scripts/
 
 Each container directory includes its own `Dockerfile` and container-specific documentation.
 
+## Container Documentation
+
+Use the per-container guides for environment variables, runtime behavior, and compose examples:
+
+* [containers/template/README.md](containers/template/README.md)
+* [containers/ftp-downloader/README.md](containers/ftp-downloader/README.md)
+* [containers/realtime-backend/README.md](containers/realtime-backend/README.md)
+* [containers/realtime-frontend/README.md](containers/realtime-frontend/README.md)
+* [containers/sftp_mysql-downloader/README.md](containers/sftp_mysql-downloader/README.md)
+
 ## Build Locally
 
 Build a specific container with the helper script:
@@ -49,6 +59,32 @@ Example:
 
 ```bash
 docker run --rm local/template echo hello
+```
+
+### Realtime Pair Quick Start
+
+Build and run the realtime API plus dashboard locally:
+
+```bash
+./scripts/build-local.sh realtime-backend
+./scripts/build-local.sh realtime-frontend
+
+docker network create realtime-net
+
+docker run -d --name backend --network realtime-net -p 3000:3000 local/realtime-backend
+docker run -d --name frontend --network realtime-net -p 8080:80 local/realtime-frontend
+```
+
+Then open:
+
+* dashboard: `http://localhost:8080`
+* API health: `http://localhost:3000/health`
+
+Clean up:
+
+```bash
+docker rm -f frontend backend
+docker network rm realtime-net
 ```
 
 ## Published Images
