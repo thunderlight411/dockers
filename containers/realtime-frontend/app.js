@@ -6,6 +6,7 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').add
 // State
 let flightMarkers = {};
 let previousFlights = {};
+let flightTrails = {};
 let quakeMarkers = [];
 
 // ✈️ Plane icon
@@ -132,6 +133,33 @@ async function loadFlights() {
         flightMarkers[id] = marker;
         return;
       }
+      // trail init
+      if (!flightTrails[id]) {
+        flightTrails[id] = [];
+      }
+
+      // voeg nieuwe positie toe
+      flightTrails[id].push([flight.lat, flight.lon]);
+
+      // max lengte beperken (bijv. laatste 20 punten)
+      if (flightTrails[id].length > 20) {
+        flightTrails[id].shift();
+      }
+
+      // verwijder oude lijn als die bestaat
+      if (flightTrails[id].line) {
+        map.removeLayer(flightTrails[id].line);
+      }
+
+      // teken nieuwe lijn
+      const line = L.polyline(flightTrails[id], {
+        color: "#00d4ff",
+        weight: 1,
+        opacity: 0.5
+      }).addTo(map);
+
+      // sla lijn op
+      flightTrails[id].line = line;
 
       // bestaand → smooth move
       if (prev) {
@@ -144,6 +172,12 @@ async function loadFlights() {
       if (!newFlights[id]) {
         map.removeLayer(flightMarkers[id]);
         delete flightMarkers[id];
+      }
+      if (flightTrails[id]) {
+        if (flightTrails[id].line) {
+          map.removeLayer(flightTrails[id].line);
+        }
+        delete flightTrails[id];
       }
     });
 
