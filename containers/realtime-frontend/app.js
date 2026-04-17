@@ -1,14 +1,34 @@
 const map = L.map('map').setView([20, 0], 2);
 
+// 🌙 Dark mode kaart
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+
+// State
 let flightMarkers = {};
 let previousFlights = {};
+let quakeMarkers = [];
 
-function lerp(start, end, t) {
-  return start + (end - start) * t;
+// ✈️ Plane icon
+function createPlaneIcon(rotation = 0) {
+  return L.divIcon({
+    className: "plane-icon",
+    html: `
+      <div style="
+        transform: rotate(${rotation}deg);
+        color: #00d4ff;
+        font-size: 14px;
+      ">
+        ✈
+      </div>
+    `,
+    iconSize: [20, 20],
+    iconAnchor: [10, 10]
+  });
 }
 
+// ✈️ Smooth animation
 function animateMarker(marker, from, to) {
-  const duration = 20000; // 20 sec (zelfde als refresh)
+  const duration = 20000;
   const steps = 60;
   const interval = duration / steps;
 
@@ -29,33 +49,38 @@ function animateMarker(marker, from, to) {
   }, interval);
 }
 
-// 🌙 Dark mode kaart (rustiger)
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
-
-let quakeMarkers = [];
-let flightMarkers = [];
-
+// 🌍 Earthquakes
 async function loadEarthquakes() {
-  const res = await fetch("/api/earthquakes");
-  const data = await res.json();
+  try {
+    const res = await fetch("/api/earthquakes");
+    const data = await res.json();
 
-  quakeMarkers.forEach(m => map.removeLayer(m));
-  quakeMarkers = [];
+    quakeMarkers.forEach(m => map.removeLayer(m));
+    quakeMarkers = [];
 
-  data.features.forEach(eq => {
-    const [lng, lat] = eq.geometry.coordinates;
+    data.features.forEach(eq => {
+      const [lng, lat] = eq.geometry.coordinates;
 
-    const marker = L.circleMarker([lat, lng], {
-      radius: eq.properties.mag * 2,
-      color: "orange"
-    }).addTo(map);
+      const marker = L.circleMarker([lat, lng], {
+        radius: eq.properties.mag * 2,
+        color: "orange",
+        fillOpacity: 0.7
+      }).addTo(map);
 
-    marker.bindPopup(`🌍 ${eq.properties.place}<br>Mag: ${eq.properties.mag}`);
+      marker.bindPopup(`
+        🌍 ${eq.properties.place}<br>
+        Magnitude: ${eq.properties.mag}
+      `);
 
-    quakeMarkers.push(marker);
-  });
+      quakeMarkers.push(marker);
+    });
+
+  } catch (err) {
+    console.error("Earthquake error:", err);
+  }
 }
 
+// ✈️ Flights (clean + smooth)
 async function loadFlights() {
   try {
     const res = await fetch("/api/flights");
@@ -63,10 +88,13 @@ async function loadFlights() {
 
     if (!data.states) return;
 
+    // 🔥 performance limit
+    let states = data.states.slice(0, 1500);
+
     const newFlights = {};
 
-    data.states.forEach(f => {
-      const id = f[0]; // uniek (icao24)
+    states.forEach(f => {
+      const id = f[0];
       const lon = f[5];
       const lat = f[6];
 
@@ -80,31 +108,34 @@ async function loadFlights() {
       };
     });
 
-    // update / create markers
+    // create / update
     Object.keys(newFlights).forEach(id => {
       const flight = newFlights[id];
       const prev = previousFlights[id];
 
-      // nieuw vliegtuig
+      // nieuw
       if (!flightMarkers[id]) {
-        const marker = L.circleMarker([flight.lat, flight.lon], {
-          radius: 3,
-          color: "#00d4ff"
-        }).addTo(map);
+        const marker = L.marker(
+          [flight.lat, flight.lon],
+          { icon: createPlaneIcon() }
+        ).addTo(map);
 
-        marker.bindPopup(`✈️ ${flight.callsign || "Unknown"}<br>${flight.country}`);
+        marker.bindPopup(`
+          ✈️ ${flight.callsign || "Unknown"}<br>
+          🌍 ${flight.country}
+        `);
 
         flightMarkers[id] = marker;
         return;
       }
 
-      // bestaande → smooth bewegen
+      // bestaand → smooth move
       if (prev) {
         animateMarker(flightMarkers[id], prev, flight);
       }
     });
 
-    // verwijder verdwenen flights
+    // verwijder oude flights
     Object.keys(flightMarkers).forEach(id => {
       if (!newFlights[id]) {
         map.removeLayer(flightMarkers[id]);
@@ -119,6 +150,7 @@ async function loadFlights() {
   }
 }
 
+// 🔄 refresh loop
 async function refresh() {
   await loadEarthquakes();
   await loadFlights();
