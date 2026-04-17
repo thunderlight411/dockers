@@ -7,7 +7,7 @@ let quakeMarkers = [];
 let flightMarkers = [];
 
 async function loadEarthquakes() {
-  const res = await fetch("http://backend:3000/earthquakes");
+  const res = await fetch("/api/earthquakes");
   const data = await res.json();
 
   quakeMarkers.forEach(m => map.removeLayer(m));
@@ -28,7 +28,7 @@ async function loadEarthquakes() {
 }
 
 async function loadFlights() {
-  const res = await fetch("http://backend:3000/flights");
+  const res = await fetch("/api/flights");
   const data = await res.json();
 
   flightMarkers.forEach(m => map.removeLayer(m));
