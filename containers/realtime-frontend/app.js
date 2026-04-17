@@ -4,10 +4,10 @@ const map = L.map('map').setView([20, 0], 2);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
 
 // ⚡ Lightning layer (tile-based, stabiel)
-const lightningLayer = L.tileLayer(
-  "https://tile.lightningmaps.org/tiles/{z}/{x}/{y}.png",
+const weatherLayer = L.tileLayer(
+  "/api/weather/{z}/{x}/{y}.png",
   {
-    opacity: 0.6
+    opacity: 0.5
   }
 );
 
@@ -243,13 +243,10 @@ document.addEventListener("DOMContentLoaded", () => {
     lightning.addEventListener("change", e => {
       showLightning = e.target.checked;
 
-      const lightningToggle = document.getElementById("toggleLightning");
-
-      if (lightningToggle && lightningToggle.checked) {
-        showLightning = true;
-        lightningLayer.addTo(map);
+      if (showLightning) {
+        map.addLayer(weatherLayer);
       } else {
-        map.removeLayer(lightningLayer);
+        map.removeLayer(weatherLayer);
       }
     });
   }
