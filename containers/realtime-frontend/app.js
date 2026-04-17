@@ -8,6 +8,7 @@ let flightMarkers = {};
 let previousFlights = {};
 let flightTrails = {};
 let quakeMarkers = [];
+let lightningMarkers = [];
 
 // ✈️ Plane icon
 function createPlaneIcon(rotation = 0) {
@@ -188,11 +189,42 @@ async function loadFlights() {
   }
 }
 
+async function loadLightning() {
+  try {
+    const res = await fetch("https://data.lightningmaps.org/json/strikes.json");
+    const data = await res.json();
+
+    // oude markers verwijderen
+    lightningMarkers.forEach(m => map.removeLayer(m));
+    lightningMarkers = [];
+
+    data.forEach(strike => {
+      const lat = strike.lat;
+      const lon = strike.lon;
+
+      if (!lat || !lon) return;
+
+      const marker = L.circleMarker([lat, lon], {
+        radius: 3,
+        color: "#ffff00",
+        opacity: 1
+      }).addTo(map);
+
+      lightningMarkers.push(marker);
+    });
+
+  } catch (err) {
+    console.error("Lightning error:", err);
+  }
+}
+
 // 🔄 refresh loop
 async function refresh() {
   await loadEarthquakes();
   await loadFlights();
+  await loadLightning();
 }
 
 refresh();
-setInterval(refresh, 20000);
+setInterval(refresh, 20000); // elke 20 sec voor alles
+setInterval(loadLightning, 10000); // elke 10 sec voor bliksem  
