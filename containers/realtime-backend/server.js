@@ -23,12 +23,31 @@ app.get("/flights", async (req, res) => {
       { timeout: 5000 }
     );
 
-    res.json(response.data);
-  } catch (err) {
-    console.error("OpenSky error:", err.message);
+    if (response.data.states && response.data.states.length > 0) {
+      return res.json(response.data);
+    }
 
-    // 👇 BELANGRIJK: stuur lege dataset i.p.v. 500
-    res.json({ states: [] });
+    throw new Error("No data");
+
+  } catch (err) {
+    console.warn("Using fallback flight data");
+
+    // ✈️ fake flights
+    const fakeStates = Array.from({ length: 50 }).map((_, i) => [
+      "fake" + i,
+      "FL" + (100 + i),
+      "DemoLand",
+      null,
+      null,
+      -180 + Math.random() * 360, // lon
+      -90 + Math.random() * 180,  // lat
+      10000,
+      false,
+      250,
+      Math.random() * 360 // heading
+    ]);
+
+    res.json({ states: fakeStates });
   }
 });
 
