@@ -19,11 +19,16 @@ app.get("/earthquakes", async (req, res) => {
 app.get("/flights", async (req, res) => {
   try {
     const response = await axios.get(
-      "https://opensky-network.org/api/states/all"
+      "https://opensky-network.org/api/states/all",
+      { timeout: 5000 }
     );
+
     res.json(response.data);
   } catch (err) {
-    res.status(500).send("Error fetching flights");
+    console.error("OpenSky error:", err.message);
+
+    // 👇 BELANGRIJK: stuur lege dataset i.p.v. 500
+    res.json({ states: [] });
   }
 });
 

@@ -232,12 +232,12 @@ async function loadLightning() {
 async function refresh() {
   await loadEarthquakes();
   await loadFlights();
-  await loadLightning();
+//  await loadLightning();
 }
 
 refresh();
 setInterval(refresh, 20000);
-setInterval(loadLightning, 10000);
+//setInterval(loadLightning, 10000);
 
 // ===== UI EVENTS =====
 document.addEventListener("DOMContentLoaded", () => {
