@@ -173,7 +173,7 @@ async function loadFlights() {
 
       flightTrails[id].push([flight.lat, flight.lon]);
 
-      if (flightTrails[id].length > 15) {
+      if (flightTrails[id].length > 5) {
         flightTrails[id].shift();
       }
 
