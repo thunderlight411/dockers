@@ -1,5 +1,34 @@
 const map = L.map('map').setView([20, 0], 2);
 
+let flightMarkers = {};
+let previousFlights = {};
+
+function lerp(start, end, t) {
+  return start + (end - start) * t;
+}
+
+function animateMarker(marker, from, to) {
+  const duration = 20000; // 20 sec (zelfde als refresh)
+  const steps = 60;
+  const interval = duration / steps;
+
+  let i = 0;
+
+  const latStep = (to.lat - from.lat) / steps;
+  const lonStep = (to.lon - from.lon) / steps;
+
+  const anim = setInterval(() => {
+    i++;
+
+    const currentLat = from.lat + latStep * i;
+    const currentLon = from.lon + lonStep * i;
+
+    marker.setLatLng([currentLat, currentLon]);
+
+    if (i >= steps) clearInterval(anim);
+  }, interval);
+}
+
 // 🌙 Dark mode kaart (rustiger)
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
 
@@ -28,27 +57,66 @@ async function loadEarthquakes() {
 }
 
 async function loadFlights() {
-  const res = await fetch("/api/flights");
-  const data = await res.json();
+  try {
+    const res = await fetch("/api/flights");
+    const data = await res.json();
 
-  flightMarkers.forEach(m => map.removeLayer(m));
-  flightMarkers = [];
+    if (!data.states) return;
 
-  data.states.forEach(f => {
-    if (!f[5] || !f[6]) return; // lat/lon check
+    const newFlights = {};
 
-    const lat = f[6];
-    const lng = f[5];
+    data.states.forEach(f => {
+      const id = f[0]; // uniek (icao24)
+      const lon = f[5];
+      const lat = f[6];
 
-    const marker = L.circleMarker([lat, lng], {
-      radius: 3,
-      color: "cyan"
-    }).addTo(map);
+      if (lat === null || lon === null) return;
 
-    marker.bindPopup(`✈️ ${f[1] || "Unknown"}`);
+      newFlights[id] = {
+        lat,
+        lon,
+        callsign: (f[1] || "").trim(),
+        country: f[2] || "Unknown"
+      };
+    });
 
-    flightMarkers.push(marker);
-  });
+    // update / create markers
+    Object.keys(newFlights).forEach(id => {
+      const flight = newFlights[id];
+      const prev = previousFlights[id];
+
+      // nieuw vliegtuig
+      if (!flightMarkers[id]) {
+        const marker = L.circleMarker([flight.lat, flight.lon], {
+          radius: 3,
+          color: "#00d4ff"
+        }).addTo(map);
+
+        marker.bindPopup(`✈️ ${flight.callsign || "Unknown"}<br>${flight.country}`);
+
+        flightMarkers[id] = marker;
+        return;
+      }
+
+      // bestaande → smooth bewegen
+      if (prev) {
+        animateMarker(flightMarkers[id], prev, flight);
+      }
+    });
+
+    // verwijder verdwenen flights
+    Object.keys(flightMarkers).forEach(id => {
+      if (!newFlights[id]) {
+        map.removeLayer(flightMarkers[id]);
+        delete flightMarkers[id];
+      }
+    });
+
+    previousFlights = newFlights;
+
+  } catch (err) {
+    console.error("Flights error:", err);
+  }
 }
 
 async function refresh() {

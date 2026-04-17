@@ -8,6 +8,8 @@ This repository contains a small collection of Docker images built from a single
 | --------- | ------- | ---------- |
 | `template` | Minimal starter image with an entrypoint wrapper and non-root user | `alpine:3.20` |
 | `ftp-downloader` | Scheduled FTP mirroring container using `lftp` and `cron` | `alpine:latest` |
+| `realtime-backend` | Express API that proxies live earthquake and flight data feeds | `node:18-alpine` |
+| `realtime-frontend` | Nginx-served Leaflet dashboard that visualizes data from the backend API | `nginx:alpine` |
 | `sftp_mysql-downloader` | Utility container for running custom backup scripts with SFTP and MySQL tooling | `debian:bookworm-slim` |
 
 ## Repository Layout
@@ -15,6 +17,8 @@ This repository contains a small collection of Docker images built from a single
 ```text
 containers/
 	ftp-downloader/
+	realtime-backend/
+	realtime-frontend/
 	sftp_mysql-downloader/
 	template/
 scripts/
@@ -30,6 +34,8 @@ Build a specific container with the helper script:
 ```bash
 ./scripts/build-local.sh template
 ./scripts/build-local.sh ftp-downloader
+./scripts/build-local.sh realtime-backend
+./scripts/build-local.sh realtime-frontend
 ./scripts/build-local.sh sftp_mysql-downloader
 ```
 
@@ -58,6 +64,8 @@ Examples:
 ```bash
 docker pull ghcr.io/thunderlight411/dockers/template:latest
 docker pull ghcr.io/thunderlight411/dockers/ftp-downloader:latest
+docker pull ghcr.io/thunderlight411/dockers/realtime-backend:latest
+docker pull ghcr.io/thunderlight411/dockers/realtime-frontend:latest
 docker pull ghcr.io/thunderlight411/dockers/sftp_mysql-downloader:latest
 ```
 
@@ -79,6 +87,14 @@ Starter image for simple shell-based containers. It creates a non-root `app` use
 ### ftp-downloader
 
 Runs `crond` in the foreground and executes `/scripts/download.sh` on the configured schedule. The bundled crontab runs the download job daily at `06:00`.
+
+### realtime-backend
+
+Provides an Express service on port `3000` with `/earthquakes`, `/flights`, and `/health` endpoints. It proxies data from the USGS earthquake feed and the OpenSky flight states API.
+
+### realtime-frontend
+
+Serves a Leaflet-based world map through Nginx on port `80`. Requests under `/api/` are proxied to a backend service named `backend` on port `3000`, which makes it a natural fit for Docker Compose.
 
 ### sftp_mysql-downloader
 
