@@ -16,6 +16,17 @@ app.get("/earthquakes", async (req, res) => {
   }
 });
 
+app.get("/flights", async (req, res) => {
+  try {
+    const response = await axios.get(
+      "https://opensky-network.org/api/states/all"
+    );
+    res.json(response.data);
+  } catch (err) {
+    res.status(500).send("Error fetching flights");
+  }
+});
+
 app.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
