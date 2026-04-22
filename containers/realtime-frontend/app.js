@@ -253,6 +253,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // default state
   if (showLightning) {
-    lightningLayer.addTo(map);
+    weatherLayer.addTo(map);
   }
 });
