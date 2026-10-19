@@ -11,10 +11,17 @@ services:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
       - RRD_ROOT=/data
+      - THRESHOLDS_FILE=/config/thresholds.json
       - API_PORT=8085
       - LOSS_WARN_PERCENT=${LOSS_WARN_PERCENT:-5}
       - LATENCY_WARN_MS=${LATENCY_WARN_MS:-100}
     volumes:
+      - type: bind
+        source: ${SMOKEPING_THRESHOLDS_FILE:-./thresholds.json}
+        target: /config/thresholds.json
+        read_only: true
+        bind:
+          create_host_path: false
       - type: bind
         source: ${SMOKEPING_DATA_DIR:?Set SMOKEPING_DATA_DIR in your local .env}
         target: /data

@@ -1,0 +1,12 @@
+{
+  "groups": {
+    "ExampleGroup": {
+      "latency_ms": 100,
+      "packet_loss_percent": 5
+    },
+    "AnotherExampleGroup": {
+      "latency_ms": 200,
+      "packet_loss_percent": 10
+    }
+  }
+}
