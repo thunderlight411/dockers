@@ -3,3 +3,6 @@
 !.env.example
 *.rrd
 __pycache__/
+thresholds.json
+thresholds.*.json
+!thresholds.example.json
