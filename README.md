@@ -7,6 +7,7 @@ This repository contains a small collection of Docker images built from a single
 | Container | Purpose | Base Image |
 | --------- | ------- | ---------- |
 | `template` | Minimal starter image with an entrypoint wrapper and non-root user | `alpine:3.20` |
+| `smokeping-api` | Read-only JSON API for SmokePing RRD monitoring data | `debian:bookworm-slim` |
 | `ftp-downloader` | Scheduled FTP mirroring container using `lftp` and `cron` | `alpine:latest` |
 | `realtime-backend` | Express API that proxies live earthquake and flight data feeds | `node:18-alpine` |
 | `realtime-frontend` | Nginx-served Leaflet dashboard that visualizes data from the backend API | `nginx:alpine` |
@@ -31,6 +32,7 @@ Each container directory includes its own `Dockerfile` and container-specific do
 
 Use the per-container guides for environment variables, runtime behavior, and compose examples:
 
+* [containers/smokeping-api/README.md](containers/smokeping-api/README.md)
 * [containers/template/README.md](containers/template/README.md)
 * [containers/ftp-downloader/README.md](containers/ftp-downloader/README.md)
 * [containers/realtime-backend/README.md](containers/realtime-backend/README.md)
