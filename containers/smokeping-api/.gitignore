@@ -1,0 +1,5 @@
+.env
+.env.*
+!.env.example
+*.rrd
+__pycache__/

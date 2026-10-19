@@ -1,0 +1,30 @@
+services:
+  smokeping-api:
+    build: .
+    image: local/smokeping-api
+    container_name: smokeping-api
+    user: "${PUID:-1000}:${PGID:-1000}"
+    restart: unless-stopped
+    ports:
+      - "${API_BIND_ADDRESS:-127.0.0.1}:${API_HOST_PORT:-8085}:8085"
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - RRD_ROOT=/data
+      - API_PORT=8085
+      - LOSS_WARN_PERCENT=${LOSS_WARN_PERCENT:-5}
+      - LATENCY_WARN_MS=${LATENCY_WARN_MS:-100}
+    volumes:
+      - type: bind
+        source: ${SMOKEPING_DATA_DIR:?Set SMOKEPING_DATA_DIR in your local .env}
+        target: /data
+        read_only: true
+        bind:
+          create_host_path: false
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
